@@ -1,978 +1,439 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toyota Parts Catalogue & Schematic System</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-fontawesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        toyota: {
-                            red: '#EB0A1E',
-                            dark: '#111827',
-                            gray: '#F3F4F6',
-                            accent: '#D00010'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Custom scrollbar styling */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        
-        .hotspot-pin {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .hotspot-pin:hover {
-            transform: scale(1.25);
-            z-index: 30;
-        }
-        .hotspot-active {
-            transform: scale(1.3);
-            box-shadow: 0 0 0 4px rgba(235, 10, 30, 0.4);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toyota Global Electronic Parts Catalogue (EPC) - AED Pricing</title>
+  <style>
+    :root {
+      --toyota-red: #eb0a1e;
+      --toyota-dark: #111111;
+      --toyota-gray: #f4f6f8;
+      --border-color: #d1d5db;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    body { background-color: var(--toyota-gray); color: #1f2937; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* Header Navigation */
+    header { background-color: var(--toyota-dark); color: white; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--toyota-red); }
+    header h1 { font-size: 1.25rem; display: flex; align-items: center; gap: 8px; }
+    header h1 span { color: var(--toyota-red); font-weight: 800; }
+    .badge-aed { background: var(--toyota-red); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+
+    /* Modal / Password Security Overlay */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+    .modal-card { background: white; width: 90%; max-width: 440px; padding: 2rem; border-radius: 8px; border-top: 5px solid var(--toyota-red); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    .modal-card h2 { margin-bottom: 0.5rem; font-size: 1.3rem; }
+    .modal-card p { font-size: 0.85rem; color: #6b7280; margin-bottom: 1.25rem; }
+    
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.95rem; }
+
+    .btn { padding: 10px 16px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .btn-red { background: var(--toyota-red); color: white; width: 100%; }
+    .btn-red:hover { background: #c40818; }
+    .btn-dark { background: var(--toyota-dark); color: white; }
+    .btn-outline { background: transparent; border: 1px solid var(--border-color); }
+
+    /* Main Container & Grid */
+    .container { max-width: 1300px; margin: 1.5rem auto; padding: 0 1rem; flex: 1; width: 100%; }
+    .epc-grid { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; }
+    @media(max-width: 900px) { .epc-grid { grid-template-columns: 1fr; } }
+
+    /* Panels & Model Selectors */
+    .panel { background: white; padding: 1.25rem; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 1rem; }
+    .panel h3 { font-size: 0.95rem; margin-bottom: 0.75rem; border-bottom: 2px solid var(--toyota-gray); padding-bottom: 0.5rem; }
+    .vin-search-box { display: flex; gap: 6px; }
+    .model-selector { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+    .model-btn { text-align: left; padding: 8px 12px; background: #f9fafb; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: flex; justify-content: space-between; }
+    .model-btn:hover, .model-btn.active { background: #fee2e2; border-color: var(--toyota-red); color: var(--toyota-red); }
+
+    /* Schematic Diagram */
+    .schematic-box { background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 1rem; text-align: center; margin-bottom: 1.5rem; }
+    .schematic-svg { width: 100%; max-height: 280px; background: #fafafa; border: 1px dashed var(--border-color); border-radius: 4px; margin-top: 0.5rem; }
+    .hotspot { fill: #eb0a1e; cursor: pointer; transition: transform 0.2s; }
+    .hotspot:hover { fill: #111111; }
+    .hotspot-text { fill: white; font-size: 11px; font-weight: bold; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+
+    /* Parts Table */
+    .parts-table { width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); font-size: 0.9rem; }
+    .parts-table th { background: #f3f4f6; padding: 10px 12px; text-align: left; font-weight: 700; border-bottom: 2px solid var(--border-color); }
+    .parts-table td { padding: 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    .parts-table tr.highlight { background-color: #fef2f2; }
+    .part-pnc { font-family: monospace; background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-weight: bold; color: var(--toyota-dark); }
+    .part-price { font-weight: bold; color: #047857; }
+
+    /* Stock Badges */
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
+    .badge-instock { background: #d1fae5; color: #065f46; }
+    .badge-lowstock { background: #fef3c7; color: #92400e; }
+    .badge-outstock { background: #fee2e2; color: #991b1b; }
+
+    /* Cart / Quote */
+    .cart-summary { background: white; border-top: 3px solid var(--toyota-dark); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); }
+    .hidden { display: none !important; }
+  </style>
 </head>
-<body class="bg-gray-100 font-sans text-gray-800 antialiased min-h-screen flex flex-col">
+<body>
 
-    <!-- Password Protection Modal / Authentication Screen -->
-    <div id="authOverlay" class="fixed inset-0 z-50 bg-gray-900/90 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-gray-100">
-            <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-toyota-red mb-4">
-                    <i class="fa-solid fa-shield-halved text-2xl"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-900">Catalogue Security Access</h2>
-                <p class="text-sm text-gray-500 mt-1">Enter current monthly access key to unlock EPC system</p>
-            </div>
+  <!-- Password Authorization Gateway Modal -->
+  <div id="password-modal" class="overlay">
+    <div class="modal-card">
+      <h2>Toyota Security Gateway</h2>
+      <p>Enter active monthly authorization passcode to unlock the catalogue.</p>
+      
+      <div class="form-group">
+        <label>Monthly Passcode</label>
+        <input type="password" id="monthly-passcode" placeholder="e.g. TOYOTA202610">
+      </div>
+      
+      <button class="btn btn-red" onclick="authenticate()">Unlock Catalogue</button>
+      <div id="auth-error" style="color: var(--toyota-red); font-size: 0.8rem; margin-top: 10px; display: none;">
+        Invalid passcode. Please enter the current monthly key.
+      </div>
 
-            <form id="authForm" class="space-y-4" onsubmit="handleAuth(event)">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Monthly Passcode</label>
-                    <div class="relative">
-                        <input type="password" id="passcodeInput" required
-                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-toyota-red focus:border-toyota-red outline-none transition text-center text-lg tracking-widest"
-                            placeholder="••••••••">
-                        <button type="button" onclick="togglePassVisibility()" class="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600">
-                            <i id="passIcon" class="fa-solid fa-eye"></i>
-                        </button>
-                    </div>
-                    <p id="authError" class="text-xs text-red-600 mt-2 hidden flex items-center gap-1">
-                        <i class="fa-solid fa-circle-exclamation"></i> Invalid password for current month.
-                    </p>
-                </div>
-
-                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs text-gray-600">
-                    <div class="font-semibold text-gray-700 flex items-center gap-1.5 mb-1">
-                        <i class="fa-solid fa-key text-toyota-red"></i> Demo Access Key
-                    </div>
-                    Monthly Passcode: <span id="currentMonthCode" class="font-mono font-bold text-toyota-red">TOYOTA-OCT2026</span>
-                </div>
-
-                <button type="submit" class="w-full bg-toyota-red hover:bg-toyota-accent text-white font-semibold py-3 rounded-xl shadow-lg transition duration-200">
-                    Unlock EPC System
-                </button>
-            </form>
-        </div>
+      <div style="margin-top: 15px; padding: 10px; background: #f3f4f6; border-radius: 4px; font-size: 0.75rem;">
+        <strong>Current Passcode:</strong> <span id="hint-key"></span><br>
+        <em>Key format: <code>TOYOTA[YYYY][MM]</code></em>
+      </div>
     </div>
+  </div>
 
-    <!-- Main Navigation Bar -->
-    <header class="bg-gray-900 text-white sticky top-0 z-40 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- Brand & Logo -->
-                <div class="flex items-center space-x-3">
-                    <div class="bg-toyota-red p-2 rounded-lg text-white font-black text-xl tracking-tighter">
-                        <i class="fa-solid fa-car-side"></i>
-                    </div>
-                    <div>
-                        <span class="text-lg font-bold tracking-tight text-white block leading-none">TOYOTA <span class="text-toyota-red">EPC</span></span>
-                        <span class="text-[10px] text-gray-400 uppercase tracking-widest font-medium">Parts Catalogue v4.2</span>
-                    </div>
-                </div>
+  <!-- Admin Panel Modal -->
+  <div id="admin-modal" class="overlay hidden">
+    <div class="modal-card">
+      <h2>EPC Admin Master Control</h2>
+      <p>Manage monthly security access keys.</p>
+      
+      <div class="form-group">
+        <label>Set Custom Passcode</label>
+        <input type="text" id="custom-passcode-input" placeholder="Enter custom passcode">
+      </div>
 
-                <!-- Navigation Tabs -->
-                <nav class="hidden md:flex space-x-1">
-                    <button onclick="switchTab('catalog')" id="tab-catalog" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 bg-gray-800 text-white">
-                        <i class="fa-solid fa-sitemap"></i> Parts Catalogue
-                    </button>
-                    <button onclick="switchTab('vin')" id="tab-vin" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 text-gray-300 hover:bg-gray-800 hover:text-white">
-                        <i class="fa-solid fa-barcode"></i> VIN Decoder
-                    </button>
-                    <button onclick="switchTab('quote')" id="tab-quote" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 text-gray-300 hover:bg-gray-800 hover:text-white relative">
-                        <i class="fa-solid fa-file-invoice-dollar"></i> Quote Builder
-                        <span id="quoteBadge" class="hidden bg-toyota-red text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
-                    </button>
-                </nav>
+      <button class="btn btn-red" onclick="saveAdminSettings()">Save Security Configuration</button>
+      <button class="btn btn-outline" style="width: 100%; margin-top: 8px;" onclick="closeAdminModal()">Close Panel</button>
+    </div>
+  </div>
 
-                <!-- Status & Lock Control -->
-                <div class="flex items-center space-x-3">
-                    <div class="hidden sm:flex items-center gap-2 bg-gray-800 px-3 py-1.5 rounded-full text-xs text-emerald-400 border border-gray-700">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span id="vehicleActiveLabel">No Vehicle Selected</span>
-                    </div>
-                    <button onclick="lockSystem()" class="text-gray-400 hover:text-white text-sm bg-gray-800 p-2 rounded-lg border border-gray-700 transition" title="Lock System">
-                        <i class="fa-solid fa-lock"></i>
-                    </button>
-                </div>
-            </div>
+  <!-- Top Navigation Header -->
+  <header>
+    <h1><span>TOYOTA</span> Electronic Parts Catalogue <span class="badge-aed">AED Pricing</span></h1>
+    <div>
+      <button class="btn btn-dark" style="font-size: 0.8rem; padding: 6px 12px;" onclick="openAdminModal()">⚙️ Admin Controls</button>
+      <button class="btn btn-outline" style="color: white; border-color: #555; font-size: 0.8rem; padding: 6px 12px; margin-left: 6px;" onclick="lockPortal()">🔒 Lock</button>
+    </div>
+  </header>
+
+  <!-- Main Catalogue Content -->
+  <div class="container hidden" id="main-content">
+    <div class="epc-grid">
+      
+      <!-- Left Controls Panel -->
+      <div>
+        <!-- VIN Decoder -->
+        <div class="panel">
+          <h3>1. VIN / Chassis Decoder</h3>
+          <div class="vin-search-box">
+            <input type="text" id="vin-input" placeholder="e.g. JT3HN20E800" maxlength="17" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; width: 100%;">
+            <button class="btn btn-dark" style="padding: 8px 12px;" onclick="decodeVIN()">Decode</button>
+          </div>
+          <div id="vin-details" style="margin-top: 10px; font-size: 0.8rem; color: #4b5563; display: none;">
+            <strong>Detected Vehicle:</strong> <span id="vin-model-name">--</span><br>
+            <strong>Engine Code:</strong> <span id="vin-engine">--</span><br>
+            <strong>Market Spec:</strong> GCC / Middle East
+          </div>
         </div>
 
-        <!-- Mobile Navigation Bottom Bar -->
-        <div class="md:hidden flex border-t border-gray-800 bg-gray-900 justify-around py-2">
-            <button onclick="switchTab('catalog')" class="flex flex-col items-center text-xs text-gray-300 hover:text-white">
-                <i class="fa-solid fa-sitemap text-base"></i> Catalogue
-            </button>
-            <button onclick="switchTab('vin')" class="flex flex-col items-center text-xs text-gray-300 hover:text-white">
-                <i class="fa-solid fa-barcode text-base"></i> VIN Lookup
-            </button>
-            <button onclick="switchTab('quote')" class="flex flex-col items-center text-xs text-gray-300 hover:text-white relative">
-                <i class="fa-solid fa-file-invoice-dollar text-base"></i> Quotes
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Content Container -->
-    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-
-        <!-- Notification Banner -->
-        <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl border border-gray-700 flex items-center gap-3 transition-all duration-300 transform translate-y-2">
-            <i class="fa-solid fa-circle-check text-emerald-400 text-xl" id="toastIcon"></i>
-            <span id="toastMsg" class="text-sm font-medium">Action completed successfully.</span>
+        <!-- Toyota Car Models -->
+        <div class="panel">
+          <h3>2. Select Toyota Model</h3>
+          <div class="model-selector" id="model-list"></div>
         </div>
 
-        <!-- TAB 1: CATALOGUE & SCHEMATIC VIEW -->
-        <section id="view-catalog" class="space-y-6">
-            
-            <!-- Vehicle Selector Bar -->
-            <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-200">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-filter text-toyota-red"></i> Interactive Vehicle Selector
-                </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Model Year</label>
-                        <select id="selYear" onchange="updateModelOptions()" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-toyota-red outline-none">
-                            <option value="">Select Year...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Vehicle Model</label>
-                        <select id="selModel" onchange="updateTrimOptions()" disabled class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-toyota-red outline-none disabled:opacity-50">
-                            <option value="">Select Model...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Engine / Trim</label>
-                        <select id="selTrim" disabled class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-toyota-red outline-none disabled:opacity-50">
-                            <option value="">Select Trim...</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="applyVehicleSelection()" class="w-full bg-toyota-red hover:bg-toyota-accent text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-magnifying-glass"></i> Load Assembly
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- EPC Catalogue Core Interface -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                <!-- Category / Assembly Group Selector -->
-                <div class="lg:col-span-3 space-y-4">
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="bg-gray-900 text-white p-3.5 font-semibold text-sm flex items-center justify-between">
-                            <span class="flex items-center gap-2"><i class="fa-solid fa-folder-tree text-toyota-red"></i> Assembly Groups</span>
-                        </div>
-                        <div id="assemblyTree" class="divide-y divide-gray-100 max-h-[550px] overflow-y-auto">
-                            <!-- Populated dynamically via JavaScript -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Interactive Diagram Canvas & Part Hotspots -->
-                <div class="lg:col-span-6 space-y-4">
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[550px]">
-                        <!-- Schematic Header -->
-                        <div class="p-3.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <span class="bg-red-100 text-toyota-red text-xs font-bold px-2.5 py-1 rounded-md" id="diagramCode">FIG 17-01</span>
-                                <h4 class="font-bold text-gray-800 text-sm" id="diagramTitle">Engine Block & Cylinder Assembly</h4>
-                            </div>
-                            <div class="flex items-center gap-1 text-gray-500 text-xs">
-                                <button onclick="zoomDiagram(1.1)" class="p-1.5 hover:bg-gray-200 rounded" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-                                <button onclick="zoomDiagram(0.9)" class="p-1.5 hover:bg-gray-200 rounded" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
-                                <button onclick="resetDiagramZoom()" class="p-1.5 hover:bg-gray-200 rounded" title="Reset"><i class="fa-solid fa-rotate-left"></i></button>
-                            </div>
-                        </div>
-
-                        <!-- Diagram Viewport (Interactive Hotspots) -->
-                        <div class="relative flex-grow bg-slate-900 overflow-hidden flex items-center justify-center p-4 cursor-grab active:cursor-grabbing" id="diagramViewport">
-                            <div id="diagramContainer" class="relative transition-transform duration-150 origin-center">
-                                <!-- SVG Schematic Asset -->
-                                <svg id="schematicSvg" class="w-full h-auto max-w-[480px] select-none" viewBox="0 0 500 400" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <!-- Dynamic SVG Schematic graphic updated via JS -->
-                                </svg>
-
-                                <!-- Interactive Pin Hotspots overlayed dynamically -->
-                                <div id="hotspotOverlay" class="absolute inset-0 pointer-events-auto"></div>
-                            </div>
-                        </div>
-
-                        <!-- Diagram Footer -->
-                        <div class="p-2.5 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex justify-between items-center">
-                            <span><i class="fa-solid fa-hand-pointer text-toyota-red"></i> Click highlighted callout numbers to locate part details.</span>
-                            <span class="font-mono text-[10px]" id="diagramMeta">REF: TOY-2026-ENG</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Part List & Breakdown Details -->
-                <div class="lg:col-span-3 space-y-4">
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[550px]">
-                        <div class="bg-gray-900 text-white p-3.5 font-semibold text-sm flex items-center justify-between">
-                            <span class="flex items-center gap-2"><i class="fa-solid fa-list-check text-toyota-red"></i> Part Numbers</span>
-                            <span class="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-300" id="partCountLabel">0 Parts</span>
-                        </div>
-
-                        <div id="partsList" class="divide-y divide-gray-100 flex-grow overflow-y-auto p-2 space-y-1">
-                            <!-- Populated dynamically via JavaScript -->
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- TAB 2: VIN DECODER -->
-        <section id="view-vin" class="hidden space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 max-w-3xl mx-auto">
-                <div class="text-center max-w-lg mx-auto mb-8">
-                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 text-toyota-red mb-3">
-                        <i class="fa-solid fa-barcode text-xl"></i>
-                    </div>
-                    <h2 class="text-2xl font-bold text-gray-900">Toyota VIN Specification Lookup</h2>
-                    <p class="text-sm text-gray-500 mt-1">Decode 17-digit Vehicle Identification Numbers to retrieve exact OEM production specs, engine codes, and compatible catalogue parts.</p>
-                </div>
-
-                <!-- VIN Input Bar -->
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <div class="relative flex-grow">
-                        <input type="text" id="vinInput" maxlength="17" placeholder="e.g. JTDEPRAE800192837"
-                            class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl font-mono uppercase text-base focus:ring-2 focus:ring-toyota-red outline-none">
-                        <button onclick="fillSampleVin()" class="absolute right-3 top-3 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded font-sans">
-                            Sample
-                        </button>
-                    </div>
-                    <button onclick="decodeVIN()" class="bg-toyota-red hover:bg-toyota-accent text-white font-semibold px-6 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-bolt"></i> Decode VIN
-                    </button>
-                </div>
-
-                <!-- Decoded Results Display -->
-                <div id="vinResults" class="mt-8 hidden border-t border-gray-200 pt-6 space-y-6">
-                    <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-emerald-800">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-circle-check text-xl text-emerald-600"></i>
-                            <div>
-                                <h4 class="font-bold text-sm">Valid Toyota VIN Confirmed</h4>
-                                <p class="text-xs text-emerald-700 font-mono" id="vinDecodedVal">JTDEPRAE800192837</p>
-                            </div>
-                        </div>
-                        <button onclick="loadVinIntoCatalogue()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-lg font-medium transition">
-                            Load Parts Catalogue
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-                            <span class="text-xs text-gray-500 block">Model Name</span>
-                            <span class="font-bold text-gray-800 text-base" id="vinResModel">Corolla Cross</span>
-                        </div>
-                        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-                            <span class="text-xs text-gray-500 block">Model Year</span>
-                            <span class="font-bold text-gray-800 text-base" id="vinResYear">2024</span>
-                        </div>
-                        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-                            <span class="text-xs text-gray-500 block">Engine Type</span>
-                            <span class="font-bold text-gray-800 text-base" id="vinResEngine">2.0L M20A-FXS Hybrid</span>
-                        </div>
-                        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-                            <span class="text-xs text-gray-500 block">Assembly Plant</span>
-                            <span class="font-bold text-gray-800 text-base" id="vinResPlant">TMMC Ontario, Canada</span>
-                        </div>
-                        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-                            <span class="text-xs text-gray-500 block">Drivetrain</span>
-                            <span class="font-bold text-gray-800 text-base" id="vinResDrive">AWD (E-Four)</span>
-                        </div>
-                        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-                            <span class="text-xs text-gray-500 block">Transmission</span>
-                            <span class="font-bold text-gray-800 text-base" id="vinResTrans">e-CVT Automatic</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 3: QUOTE BUILDER & ESTIMATOR -->
-        <section id="view-quote" class="hidden space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="bg-gray-900 text-white p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-bold flex items-center gap-2">
-                            <i class="fa-solid fa-file-invoice-dollar text-toyota-red"></i> Parts Order & Quote Summary
-                        </h2>
-                        <p class="text-xs text-gray-400 mt-0.5">Generate official customer quotes and OEM part lists for procurement</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="clearQuote()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs px-3 py-2 rounded-lg transition border border-gray-700">
-                            <i class="fa-solid fa-trash-can"></i> Clear All
-                        </button>
-                        <button onclick="printQuote()" class="bg-toyota-red hover:bg-toyota-accent text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-1.5">
-                            <i class="fa-solid fa-print"></i> Export / Print Quote
-                        </button>
-                    </div>
-                </div>
-
-                <div class="p-6">
-                    <!-- Customer Details Form -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 pb-6 border-b border-gray-200">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">Customer / Workshop Name</label>
-                            <input type="text" id="quoteCustomer" value="Apex Auto Repair Ltd." class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-toyota-red">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">Quote Reference #</label>
-                            <input type="text" id="quoteRef" value="TOY-QT-2026-883" class="w-full bg-gray-50 border border-gray-300 rounded-lg p-2 text-sm font-mono outline-none focus:ring-2 focus:ring-toyota-red">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">Target Vehicle Model</label>
-                            <input type="text" id="quoteVehicle" value="2024 Toyota RAV4 Hybrid 2.5L" readonly class="w-full bg-gray-100 border border-gray-300 text-gray-600 rounded-lg p-2 text-sm outline-none">
-                        </div>
-                    </div>
-
-                    <!-- Quote Items Table -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase bg-gray-50">
-                                    <th class="p-3">Part Number</th>
-                                    <th class="p-3">Description</th>
-                                    <th class="p-3 text-center">Qty</th>
-                                    <th class="p-3 text-right">Unit Price ($)</th>
-                                    <th class="p-3 text-right">Total ($)</th>
-                                    <th class="p-3 text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="quoteTableBody" class="divide-y divide-gray-100 text-sm">
-                                <!-- Dynamic rows added via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Quote Financials Calculation -->
-                    <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-start gap-6">
-                        <div class="text-xs text-gray-500 max-w-md space-y-1">
-                            <p class="font-bold text-gray-700">Catalogue Terms & Conditions:</p>
-                            <p>• Genuine Toyota OEM parts carry 12-month limited warranty.</p>
-                            <p>• Prices exclude local tax and freight handling fees unless specified.</p>
-                        </div>
-                        <div class="w-full sm:w-64 bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2">
-                            <div class="flex justify-between text-xs text-gray-600">
-                                <span>Subtotal:</span>
-                                <span font-mono id="quoteSubtotal">$0.00</span>
-                            </div>
-                            <div class="flex justify-between text-xs text-gray-600">
-                                <span>Estimated Tax (8%):</span>
-                                <span font-mono id="quoteTax">$0.00</span>
-                            </div>
-                            <div class="border-t border-gray-300 pt-2 flex justify-between font-bold text-gray-900 text-base">
-                                <span>Total Quote:</span>
-                                <span class="text-toyota-red font-mono" id="quoteTotal">$0.00</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-400 text-xs py-6 mt-auto border-t border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div>
-                <p>&copy; 2026 Toyota Parts Catalog System. Internal Dealer EPC Reference Tool.</p>
-            </div>
-            <div class="flex items-center space-x-4">
-                <span>Security Status: <span class="text-emerald-400 font-semibold">AUTHENTICATED</span></span>
-                <span>•</span>
-                <span id="currentMonthYear">October 2026</span>
-            </div>
+        <!-- System Filter -->
+        <div class="panel">
+          <h3>3. System Category</h3>
+          <select id="category-filter" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;" onchange="renderParts()">
+            <option value="ALL">All Component Systems</option>
+            <option value="Engine">Engine & Mechanical</option>
+            <option value="Brakes">Braking System</option>
+            <option value="Suspension">Suspension & Steering</option>
+            <option value="Electrical">Electrical & Ignition</option>
+          </select>
         </div>
-    </footer>
-
-    <script>
-        // --- DATA STRUCTURES ---
-
-        // Monthly Security Password Config
-        const MONTHLY_PASSWORDS = {
-            "2026-01": "TOYOTA-JAN2026",
-            "2026-02": "TOYOTA-FEB2026",
-            "2026-03": "TOYOTA-MAR2026",
-            "2026-04": "TOYOTA-APR2026",
-            "2026-05": "TOYOTA-MAY2026",
-            "2026-06": "TOYOTA-JUN2026",
-            "2026-07": "TOYOTA-JUL2026",
-            "2026-08": "TOYOTA-AUG2026",
-            "2026-09": "TOYOTA-SEP2026",
-            "2026-10": "TOYOTA-OCT2026",
-            "2026-11": "TOYOTA-NOV2026",
-            "2026-12": "TOYOTA-DEC2026"
-        };
-
-        // Vehicles Catalogue Data Tree
-        const VEHICLE_DATA = {
-            "2026": {
-                "RAV4 Hybrid": ["2.5L A25A-FXS I4", "Plug-in Prime AWD"],
-                "Camry": ["2.5L HEV FWD", "2.5L HEV AWD"],
-                "Tacoma": ["2.4L Turbo i-FORCE", "2.4L i-FORCE MAX Hybrid"],
-                "Land Cruiser": ["2.4L Turbo Hybrid 195"]
-            },
-            "2025": {
-                "RAV4": ["2.5L 4-Cyl Gas", "2.5L Hybrid AWD"],
-                "Camry": ["2.5L 4-Cyl", "3.5L V6 Gas"],
-                "Corolla Cross": ["2.0L Dynamic Force", "2.0L Hybrid"]
-            },
-            "2024": {
-                "RAV4": ["2.5L 4-Cyl", "2.5L Hybrid"],
-                "Corolla": ["2.0L M20A-FKS", "1.8L Hybrid"],
-                "Highlander": ["2.4L Turbo T24A-FTS", "2.5L Hybrid"]
-            }
-        };
-
-        // Assemblies & Schematics Catalogue
-        const ASSEMBLY_GROUPS = [
-            {
-                id: "ENG-01",
-                name: "Engine & Cylinder Block",
-                code: "FIG 11-01",
-                svgType: "engine",
-                parts: [
-                    { id: 1, callout: "01", number: "11101-25040", name: "Cylinder Head Assembly", price: 850.00, pos: {x: 250, y: 110} },
-                    { id: 2, callout: "02", number: "11115-25010", name: "Cylinder Head Gasket OEM", price: 68.50, pos: {x: 250, y: 175} },
-                    { id: 3, callout: "03", number: "13201-29215", name: "Connecting Rod Set (x4)", price: 210.00, pos: {x: 180, y: 250} },
-                    { id: 4, callout: "04", number: "13011-25020", name: "Piston Ring Set", price: 84.00, pos: {x: 320, y: 250} },
-                    { id: 5, callout: "05", number: "90919-01249", name: "Iridium Spark Plug FK20HR11", price: 18.25, pos: {x: 250, y: 65} }
-                ]
-            },
-            {
-                id: "BRK-02",
-                name: "Front Brakes & Calipers",
-                code: "FIG 47-03",
-                svgType: "brake",
-                parts: [
-                    { id: 6, callout: "01", number: "43512-0E050", name: "Front Brake Disc Rotor", price: 115.00, pos: {x: 250, y: 200} },
-                    { id: 7, callout: "02", number: "04465-0E010", name: "Front Disc Brake Pad Set", price: 72.00, pos: {x: 170, y: 140} },
-                    { id: 8, callout: "03", number: "47730-0E030", name: "Hydraulic Caliper Assembly RH", price: 245.00, pos: {x: 330, y: 140} },
-                    { id: 9, callout: "04", number: "04478-0E020", name: "Caliper Rubber Boot Kit", price: 24.50, pos: {x: 330, y: 270} }
-                ]
-            },
-            {
-                id: "SUS-03",
-                name: "Front Suspension & Struts",
-                code: "FIG 48-01",
-                svgType: "suspension",
-                parts: [
-                    { id: 10, callout: "01", number: "48510-80675", name: "Front Shock Absorber Strut LH", price: 185.00, pos: {x: 250, y: 150} },
-                    { id: 11, callout: "02", number: "48131-42810", name: "Front Coil Spring", price: 92.00, pos: {x: 250, y: 240} },
-                    { id: 12, callout: "03", number: "48609-42030", name: "Strut Upper Suspension Mount", price: 54.00, pos: {x: 250, y: 70} },
-                    { id: 13, callout: "04", number: "48820-42030", name: "Stabilizer Link Assembly", price: 38.50, pos: {x: 350, y: 280} }
-                ]
-            }
-        ];
-
-        // System State Variables
-        let activeTab = 'catalog';
-        let activeAssembly = ASSEMBLY_GROUPS[0];
-        let selectedPartId = null;
-        let diagramZoom = 1;
-        let quoteItems = [
-            { id: 1, number: "11101-25040", name: "Cylinder Head Assembly", qty: 1, price: 850.00 },
-            { id: 7, number: "04465-0E010", name: "Front Disc Brake Pad Set", qty: 2, price: 72.00 }
-        ];
-
-        window.onload = function() {
-            initAuth();
-            populateSelectorYears();
-            renderAssemblyTree();
-            loadAssembly(ASSEMBLY_GROUPS[0].id);
-            renderQuoteTable();
-        };
-
-        // --- AUTHENTICATION & SECURITY SYSTEM ---
-        function getCurrentMonthKey() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            return `${year}-${month}`;
-        }
-
-        function initAuth() {
-            const currentKey = getCurrentMonthKey();
-            const passCode = MONTHLY_PASSWORDS[currentKey] || "TOYOTA-2026";
-            document.getElementById('currentMonthCode').innerText = passCode;
-            
-            // Check session storage
-            if (sessionStorage.getItem('toyota_epc_auth') === 'true') {
-                document.getElementById('authOverlay').classList.add('hidden');
-            }
-        }
-
-        function handleAuth(e) {
-            e.preventDefault();
-            const inputVal = document.getElementById('passcodeInput').value.trim();
-            const currentKey = getCurrentMonthKey();
-            const validPass = MONTHLY_PASSWORDS[currentKey] || "TOYOTA-2026";
-
-            if (inputVal === validPass) {
-                sessionStorage.setItem('toyota_epc_auth', 'true');
-                document.getElementById('authOverlay').classList.add('hidden');
-                showToast("Access Granted. EPC System Active.", "success");
-            } else {
-                document.getElementById('authError').classList.remove('hidden');
-            }
-        }
-
-        function togglePassVisibility() {
-            const input = document.getElementById('passcodeInput');
-            const icon = document.getElementById('passIcon');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.replace('fa-eye', 'fa-eye-slash');
-            } else {
-                input.type = 'password';
-                icon.classList.replace('fa-eye-slash', 'fa-eye');
-            }
-        }
-
-        function lockSystem() {
-            sessionStorage.removeItem('toyota_epc_auth');
-            document.getElementById('authOverlay').classList.remove('hidden');
-            showToast("System Locked", "info");
-        }
-
-        // --- NAVIGATION TABS ---
-        function switchTab(tabId) {
-            activeTab = tabId;
-            ['catalog', 'vin', 'quote'].forEach(id => {
-                const btn = document.getElementById(`tab-${id}`);
-                const view = document.getElementById(`view-${id}`);
-                if (id === tabId) {
-                    btn?.classList.add('bg-gray-800', 'text-white');
-                    btn?.classList.remove('text-gray-300');
-                    view?.classList.remove('hidden');
-                } else {
-                    btn?.classList.remove('bg-gray-800', 'text-white');
-                    btn?.classList.add('text-gray-300');
-                    view?.classList.add('hidden');
-                }
-            });
-        }
-
-        // --- VEHICLE SELECTOR ---
-        function populateSelectorYears() {
-            const yearSel = document.getElementById('selYear');
-            yearSel.innerHTML = '<option value="">Select Year...</option>';
-            Object.keys(VEHICLE_DATA).sort().reverse().forEach(year => {
-                yearSel.innerHTML += `<option value="${year}">${year}</option>`;
-            });
-        }
-
-        function updateModelOptions() {
-            const year = document.getElementById('selYear').value;
-            const modelSel = document.getElementById('selModel');
-            const trimSel = document.getElementById('selTrim');
-            
-            modelSel.innerHTML = '<option value="">Select Model...</option>';
-            trimSel.innerHTML = '<option value="">Select Trim...</option>';
-            trimSel.disabled = true;
-
-            if (year && VEHICLE_DATA[year]) {
-                modelSel.disabled = false;
-                Object.keys(VEHICLE_DATA[year]).forEach(model => {
-                    modelSel.innerHTML += `<option value="${model}">${model}</option>`;
-                });
-            } else {
-                modelSel.disabled = true;
-            }
-        }
-
-        function updateTrimOptions() {
-            const year = document.getElementById('selYear').value;
-            const model = document.getElementById('selModel').value;
-            const trimSel = document.getElementById('selTrim');
-
-            trimSel.innerHTML = '<option value="">Select Trim...</option>';
-
-            if (year && model && VEHICLE_DATA[year][model]) {
-                trimSel.disabled = false;
-                VEHICLE_DATA[year][model].forEach(trim => {
-                    trimSel.innerHTML += `<option value="${trim}">${trim}</option>`;
-                });
-            } else {
-                trimSel.disabled = true;
-            }
-        }
-
-        function applyVehicleSelection() {
-            const year = document.getElementById('selYear').value;
-            const model = document.getElementById('selModel').value;
-            const trim = document.getElementById('selTrim').value;
-
-            if (!year || !model) {
-                showToast("Please select a Year and Model.", "warning");
-                return;
-            }
-
-            const activeStr = `${year} Toyota ${model} ${trim ? '(' + trim + ')' : ''}`;
-            document.getElementById('vehicleActiveLabel').innerText = activeStr;
-            document.getElementById('quoteVehicle').value = activeStr;
-            showToast(`Loaded specs for ${activeStr}`, "success");
-        }
-
-        // --- ASSEMBLY & SCHEMATIC RENDERING ---
-        function renderAssemblyTree() {
-            const tree = document.getElementById('assemblyTree');
-            tree.innerHTML = '';
-            ASSEMBLY_GROUPS.forEach(group => {
-                tree.innerHTML += `
-                    <button onclick="loadAssembly('${group.id}')" id="asm-${group.id}"
-                        class="w-full text-left p-3.5 text-xs hover:bg-red-50 transition flex items-center justify-between group">
-                        <div>
-                            <span class="text-gray-400 font-mono block text-[10px] group-hover:text-toyota-red">${group.code}</span>
-                            <span class="font-bold text-gray-800 group-hover:text-toyota-red">${group.name}</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-toyota-red text-xs"></i>
-                    </button>
-                `;
-            });
-        }
-
-        function loadAssembly(groupId) {
-            const group = ASSEMBLY_GROUPS.find(g => g.id === groupId);
-            if (!group) return;
-
-            activeAssembly = group;
-            selectedPartId = null;
-
-            // Update assembly group selection UI
-            ASSEMBLY_GROUPS.forEach(g => {
-                const el = document.getElementById(`asm-${g.id}`);
-                if (g.id === groupId) {
-                    el?.classList.add('bg-red-50', 'border-l-4', 'border-toyota-red');
-                } else {
-                    el?.classList.remove('bg-red-50', 'border-l-4', 'border-toyota-red');
-                }
-            });
-
-            // Update Labels
-            document.getElementById('diagramCode').innerText = group.code;
-            document.getElementById('diagramTitle').innerText = group.name;
-            document.getElementById('partCountLabel').innerText = `${group.parts.length} Parts`;
-
-            // Draw SVG Schematic
-            renderSchematicSVG(group.svgType);
-
-            // Render Hotspots & Parts List
-            renderHotspots();
-            renderPartsList();
-        }
-
-        function renderSchematicSVG(type) {
-            const svg = document.getElementById('schematicSvg');
-            let content = '';
-
-            if (type === 'engine') {
-                content = `
-                    <rect x="120" y="80" width="260" height="240" rx="16" fill="#1E293B" stroke="#475569" stroke-width="4"/>
-                    <rect x="150" y="100" width="200" height="40" rx="8" fill="#334155" stroke="#94A3B8" stroke-width="2"/>
-                    <line x1="150" y1="160" x2="350" y2="160" stroke="#EF4444" stroke-width="3" stroke-dasharray="6,6"/>
-                    <circle cx="200" cy="240" r="30" fill="#334155" stroke="#94A3B8" stroke-width="3"/>
-                    <circle cx="300" cy="240" r="30" fill="#334155" stroke="#94A3B8" stroke-width="3"/>
-                    <line x1="200" y1="210" x2="200" y2="160" stroke="#64748B" stroke-width="6"/>
-                    <line x1="300" y1="210" x2="300" y2="160" stroke="#64748B" stroke-width="6"/>
-                    <circle cx="250" cy="65" r="12" fill="#F59E0B"/>
-                `;
-            } else if (type === 'brake') {
-                content = `
-                    <circle cx="250" cy="200" r="130" fill="#1E293B" stroke="#475569" stroke-width="6"/>
-                    <circle cx="250" cy="200" r="80" fill="#0F172A" stroke="#334155" stroke-width="4"/>
-                    <circle cx="250" cy="200" r="25" fill="#334155"/>
-                    <path d="M 140 120 A 130 130 0 0 1 220 80 L 210 160 Z" fill="#EF4444" opacity="0.8"/>
-                    <rect x="310" y="110" width="50" height="80" rx="8" fill="#DC2626" stroke="#FCA5A5" stroke-width="2"/>
-                `;
-            } else if (type === 'suspension') {
-                content = `
-                    <rect x="235" y="60" width="30" height="30" rx="4" fill="#475569"/>
-                    <line x1="250" y1="90" x2="250" y2="320" stroke="#94A3B8" stroke-width="12"/>
-                    <path d="M 220 120 Q 280 140 220 160 Q 280 180 220 200 Q 280 220 220 240 Q 280 260 220 280" fill="none" stroke="#EF4444" stroke-width="8" stroke-linecap="round"/>
-                    <rect x="210" y="300" width="80" height="25" rx="6" fill="#334155"/>
-                `;
-            }
-
-            svg.innerHTML = content;
-        }
-
-        function renderHotspots() {
-            const overlay = document.getElementById('hotspotOverlay');
-            overlay.innerHTML = '';
-
-            activeAssembly.parts.forEach(part => {
-                const isSelected = selectedPartId === part.id;
-                overlay.innerHTML += `
-                    <button onclick="selectPart(${part.id})" style="left: ${part.pos.x}px; top: ${part.pos.y}px;"
-                        class="hotspot-pin absolute transform -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full font-mono text-xs font-bold flex items-center justify-center shadow-lg border-2 ${
-                            isSelected ? 'bg-toyota-red text-white border-white ring-4 ring-red-300 z-20 scale-125' : 'bg-white text-gray-900 border-toyota-red hover:bg-toyota-red hover:text-white'
-                        }">
-                        ${part.callout}
-                    </button>
-                `;
-            });
-        }
-
-        function renderPartsList() {
-            const container = document.getElementById('partsList');
-            container.innerHTML = '';
-
-            activeAssembly.parts.forEach(part => {
-                const isSelected = selectedPartId === part.id;
-                container.innerHTML += `
-                    <div id="part-card-${part.id}" onclick="selectPart(${part.id})"
-                        class="p-3 rounded-xl border text-xs transition cursor-pointer flex flex-col justify-between space-y-2 ${
-                            isSelected ? 'bg-red-50 border-toyota-red ring-1 ring-toyota-red' : 'bg-white border-gray-200 hover:border-gray-300'
-                        }">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="bg-gray-900 text-white font-mono px-1.5 py-0.5 rounded text-[10px] font-bold">${part.callout}</span>
-                                    <span class="font-mono font-bold text-toyota-red">${part.number}</span>
-                                </div>
-                                <h5 class="font-bold text-gray-800 mt-1">${part.name}</h5>
-                            </div>
-                            <span class="font-mono font-bold text-gray-900 text-sm">$${part.price.toFixed(2)}</span>
-                        </div>
-                        <div class="flex justify-end pt-1">
-                            <button onclick="event.stopPropagation(); addToQuote(${part.id})" class="bg-gray-900 hover:bg-toyota-red text-white text-[11px] px-2.5 py-1 rounded-md transition flex items-center gap-1">
-                                <i class="fa-solid fa-plus text-[9px]"></i> Add to Quote
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function selectPart(partId) {
-            selectedPartId = partId;
-            renderHotspots();
-            renderPartsList();
-
-            // Scroll item into view in list
-            const card = document.getElementById(`part-card-${partId}`);
-            card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-
-        function zoomDiagram(factor) {
-            diagramZoom *= factor;
-            diagramZoom = Math.min(Math.max(0.6, diagramZoom), 2.2);
-            document.getElementById('diagramContainer').style.transform = `scale(${diagramZoom})`;
-        }
-
-        function resetDiagramZoom() {
-            diagramZoom = 1;
-            document.getElementById('diagramContainer').style.transform = `scale(1)`;
-        }
-
-        // --- VIN DECODER TOOL ---
-        function fillSampleVin() {
-            document.getElementById('vinInput').value = "JTDEPRAE800192837";
-        }
-
-        function decodeVIN() {
-            const vin = document.getElementById('vinInput').value.trim().toUpperCase();
-            if (vin.length !== 17) {
-                showToast("Please enter a valid 17-character VIN.", "warning");
-                return;
-            }
-
-            document.getElementById('vinDecodedVal').innerText = vin;
-            document.getElementById('vinResults').classList.remove('hidden');
-
-            // Set simulated specs based on VIN code
-            if (vin.startsWith("JTD")) {
-                document.getElementById('vinResModel').innerText = "RAV4 Prime PHEV";
-                document.getElementById('vinResPlant').innerText = "Aichi, Japan (Toyota Auto Body)";
-            } else {
-                document.getElementById('vinResModel').innerText = "Corolla Cross Hybrid";
-                document.getElementById('vinResPlant').innerText = "TMMC Ontario, Canada";
-            }
-
-            showToast("VIN decoded successfully!", "success");
-        }
-
-        function loadVinIntoCatalogue() {
-            const model = document.getElementById('vinResModel').innerText;
-            document.getElementById('vehicleActiveLabel').innerText = `VIN Matched: ${model}`;
-            document.getElementById('quoteVehicle').value = model;
-            switchTab('catalog');
-            showToast(`Loaded OEM catalogue for ${model}`, "info");
-        }
-
-        // --- QUOTE BUILDER ENGINE ---
-        function addToQuote(partId) {
-            const part = activeAssembly.parts.find(p => p.id === partId);
-            if (!part) return;
-
-            const existing = quoteItems.find(item => item.number === part.number);
-            if (existing) {
-                existing.qty += 1;
-            } else {
-                quoteItems.push({
-                    id: part.id,
-                    number: part.number,
-                    name: part.name,
-                    qty: 1,
-                    price: part.price
-                });
-            }
-
-            renderQuoteTable();
-            showToast(`Added "${part.name}" to Quote`, "success");
-        }
-
-        function updateQuoteQty(index, change) {
-            quoteItems[index].qty += change;
-            if (quoteItems[index].qty <= 0) {
-                quoteItems.splice(index, 1);
-            }
-            renderQuoteTable();
-        }
-
-        function removeQuoteItem(index) {
-            quoteItems.splice(index, 1);
-            renderQuoteTable();
-        }
-
-        function clearQuote() {
-            quoteItems = [];
-            renderQuoteTable();
-            showToast("Quote items cleared.", "info");
-        }
-
-        function renderQuoteTable() {
-            const tbody = document.getElementById('quoteTableBody');
-            const badge = document.getElementById('quoteBadge');
-            tbody.innerHTML = '';
-
-            let subtotal = 0;
-            let totalCount = 0;
-
-            if (quoteItems.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="p-8 text-center text-gray-400 italic">
-                            No parts added to quote yet. Select parts from the catalogue diagram.
-                        </td>
-                    </tr>
-                `;
-            } else {
-                quoteItems.forEach((item, idx) => {
-                    const lineTotal = item.qty * item.price;
-                    subtotal += lineTotal;
-                    totalCount += item.qty;
-
-                    tbody.innerHTML += `
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="p-3 font-mono font-bold text-toyota-red">${item.number}</td>
-                            <td class="p-3 font-medium text-gray-800">${item.name}</td>
-                            <td class="p-3 text-center">
-                                <div class="inline-flex items-center border border-gray-300 rounded-lg overflow-hidden bg-white">
-                                    <button onclick="updateQuoteQty(${idx}, -1)" class="px-2 py-1 text-gray-500 hover:bg-gray-100">-</button>
-                                    <span class="px-3 font-mono font-bold text-xs">${item.qty}</span>
-                                    <button onclick="updateQuoteQty(${idx}, 1)" class="px-2 py-1 text-gray-500 hover:bg-gray-100">+</button>
-                                </div>
-                            </td>
-                            <td class="p-3 text-right font-mono">$${item.price.toFixed(2)}</td>
-                            <td class="p-3 text-right font-mono font-bold text-gray-900">$${lineTotal.toFixed(2)}</td>
-                            <td class="p-3 text-center">
-                                <button onclick="removeQuoteItem(${idx})" class="text-gray-400 hover:text-red-600 transition">
-                                    <i class="fa-solid fa-xmark"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            }
-
-            // Calculations
-            const tax = subtotal * 0.08;
-            const total = subtotal + tax;
-
-            document.getElementById('quoteSubtotal').innerText = `$${subtotal.toFixed(2)}`;
-            document.getElementById('quoteTax').innerText = `$${tax.toFixed(2)}`;
-            document.getElementById('quoteTotal').innerText = `$${total.toFixed(2)}`;
-
-            // Badge count
-            if (totalCount > 0) {
-                badge.innerText = totalCount;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-        }
-
-        function printQuote() {
-            window.print();
-        }
-
-        // --- TOAST NOTIFICATIONS ---
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const msg = document.getElementById('toastMsg');
-            const icon = document.getElementById('toastIcon');
-
-            msg.innerText = message;
-
-            if (type === 'success') {
-                icon.className = 'fa-solid fa-circle-check text-emerald-400 text-xl';
-            } else if (type === 'warning') {
-                icon.className = 'fa-solid fa-circle-exclamation text-amber-400 text-xl';
-            } else {
-                icon.className = 'fa-solid fa-circle-info text-blue-400 text-xl';
-            }
-
-            toast.classList.remove('hidden', 'translate-y-2');
-            setTimeout(() => {
-                toast.classList.add('translate-y-2', 'hidden');
-            }, 3000);
-        }
-    </script>
+      </div>
+
+      <!-- Right Interactive Viewing Area -->
+      <div>
+        <!-- Interactive Assembly Schematic -->
+        <div class="schematic-box">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong>System Schematic Diagram</strong>
+            <span style="font-size: 0.75rem; color: #6b7280;">Click PNC badges on diagram to isolate part</span>
+          </div>
+          
+          <svg class="schematic-svg" viewBox="0 0 600 220">
+            <rect x="50" y="40" width="500" height="140" rx="8" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2" stroke-dasharray="4"/>
+            <circle cx="150" cy="110" r="35" fill="#d1d5db" stroke="#6b7280" stroke-width="2"/>
+            <circle cx="450" cy="110" r="35" fill="#d1d5db" stroke="#6b7280" stroke-width="2"/>
+            <line x1="185" y1="110" x2="415" y2="110" stroke="#4b5563" stroke-width="6"/>
+
+            <!-- PNC Hotspots -->
+            <g class="hotspot" onclick="filterByPNC('04465')" transform="translate(150, 110)">
+              <circle cx="0" cy="0" r="16"/>
+              <text class="hotspot-text" x="0" y="0">04465</text>
+            </g>
+
+            <g class="hotspot" onclick="filterByPNC('04152')" transform="translate(300, 110)">
+              <circle cx="0" cy="0" r="16"/>
+              <text class="hotspot-text" x="0" y="0">04152</text>
+            </g>
+
+            <g class="hotspot" onclick="filterByPNC('48510')" transform="translate(450, 110)">
+              <circle cx="0" cy="0" r="16"/>
+              <text class="hotspot-text" x="0" y="0">48510</text>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Parts Data Table -->
+        <table class="parts-table">
+          <thead>
+            <tr>
+              <th>PNC / Part No.</th>
+              <th>Part Description</th>
+              <th>System</th>
+              <th>AED Price</th>
+              <th>Availability</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="parts-table-body"></tbody>
+        </table>
+
+        <!-- AED Quotation Summary -->
+        <div class="cart-summary" style="margin-top: 1.5rem;">
+          <h3 style="margin-bottom: 0.75rem;">Parts Quotation Request (AED)</h3>
+          <div id="cart-items" style="font-size: 0.85rem; margin-bottom: 1rem;">
+            <em>No items added to quotation. Click "+ Add" on required parts.</em>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 0.75rem; font-weight: bold;">
+            <span>Subtotal:</span>
+            <span id="quote-subtotal">AED 0.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #6b7280; margin-top: 4px;">
+            <span>Estimated VAT (5%):</span>
+            <span id="quote-vat">AED 0.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; color: var(--toyota-dark); margin-top: 8px;">
+            <span>Total Price:</span>
+            <span id="quote-total" style="color: var(--toyota-red);">AED 0.00</span>
+          </div>
+
+          <button class="btn btn-dark" style="width: 100%; margin-top: 1rem;" onclick="window.print()">🖨️ Print Formal AED Quote</button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Passcode Logic
+    function getExpectedPasscode() {
+      const stored = localStorage.getItem('toyota_epc_custom_key');
+      if (stored) return stored;
+      
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return `TOYOTA${year}${month}`;
+    }
+
+    document.getElementById('hint-key').innerText = getExpectedPasscode();
+
+    function authenticate() {
+      const entered = document.getElementById('monthly-passcode').value.trim();
+      const expected = getExpectedPasscode();
+
+      if (entered === expected) {
+        document.getElementById('password-modal').classList.add('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        renderModels();
+        renderParts();
+      } else {
+        document.getElementById('auth-error').style.display = 'block';
+      }
+    }
+
+    function lockPortal() {
+      document.getElementById('main-content').classList.add('hidden');
+      document.getElementById('password-modal').classList.remove('hidden');
+      document.getElementById('monthly-passcode').value = '';
+    }
+
+    function openAdminModal() { document.getElementById('admin-modal').classList.remove('hidden'); }
+    function closeAdminModal() { document.getElementById('admin-modal').classList.add('hidden'); }
+
+    function saveAdminSettings() {
+      const customKey = document.getElementById('custom-passcode-input').value.trim();
+      if(customKey) {
+        localStorage.setItem('toyota_epc_custom_key', customKey);
+        document.getElementById('hint-key').innerText = customKey;
+        alert('Passcode updated successfully.');
+      }
+      closeAdminModal();
+    }
+
+    // Toyota Models Database
+    const toyotaModels = [
+      { id: 'LC300', name: 'Land Cruiser LC300', year: '2022-2026', vinPrefix: 'JT3HN' },
+      { id: 'CAMRY', name: 'Camry Hybrid / V6', year: '2018-2026', vinPrefix: '4T1B' },
+      { id: 'HILUX', name: 'Hilux Revo / GR', year: '2016-2026', vinPrefix: 'MR0HA' },
+      { id: 'RAV4', name: 'RAV4 AWD', year: '2019-2026', vinPrefix: '2T3P' },
+      { id: 'COROLLA', name: 'Corolla Sedan', year: '2019-2026', vinPrefix: 'JTDEP' },
+      { id: 'GZG50', name: 'Century V12 (GZG50)', year: '1997-2017', vinPrefix: 'GZG50' },
+      { id: 'AE86', name: 'Sprinter Trueno AE86', year: '1983-1987', vinPrefix: 'AE86' },
+      { id: 'BXD20', name: 'Mega Cruiser 4x4', year: '1996-2001', vinPrefix: 'BXD20' }
+    ];
+
+    let activeModelId = 'LC300';
+
+    function renderModels() {
+      const container = document.getElementById('model-list');
+      container.innerHTML = '';
+      toyotaModels.forEach(m => {
+        const btn = document.createElement('button');
+        btn.className = `model-btn ${m.id === activeModelId ? 'active' : ''}`;
+        btn.onclick = () => { activeModelId = m.id; renderModels(); renderParts(); };
+        btn.innerHTML = `<span>${m.name}</span> <small style="color:#6b7280">${m.year}</small>`;
+        container.appendChild(btn);
+      });
+    }
+
+    // Parts Catalog Database
+    const genuineParts = [
+      { pnc: '04152', number: '04152-YZZA1', name: 'Oil Filter Element Cartridge', category: 'Engine', priceAED: 28.50, stock: 'instock', models: ['LC300', 'CAMRY', 'RAV4', 'COROLLA'] },
+      { pnc: '04465', number: '04465-60320', name: 'Front Brake Pad Kit (Ceramic)', category: 'Brakes', priceAED: 345.00, stock: 'instock', models: ['LC300', 'HILUX'] },
+      { pnc: '04465', number: '04465-33480', name: 'Front Brake Pad Disc Set', category: 'Brakes', priceAED: 220.00, stock: 'instock', models: ['CAMRY', 'RAV4'] },
+      { pnc: '48510', number: '48510-60290', name: 'Front Shock Absorber Strut Assembly', category: 'Suspension', priceAED: 680.00, stock: 'lowstock', models: ['LC300', 'BXD20'] },
+      { pnc: '90919', number: '90919-01249', name: 'Iridium Spark Plug Set (FK20HR11)', category: 'Electrical', priceAED: 185.00, stock: 'instock', models: ['CAMRY', 'COROLLA', 'RAV4'] },
+      { pnc: '17801', number: '17801-F0020', name: 'Engine Combustion Air Filter', category: 'Engine', priceAED: 85.00, stock: 'instock', models: ['CAMRY', 'RAV4', 'HILUX'] },
+      { pnc: '1GZG', number: '13568-39015', name: 'Century V12 Genuine Timing Belt', category: 'Engine', priceAED: 520.00, stock: 'lowstock', models: ['GZG50'] },
+      { pnc: '4AG', number: '13568-19015', name: '4A-GE High RPM Timing Belt', category: 'Engine', priceAED: 195.00, stock: 'outstock', models: ['AE86'] }
+    ];
+
+    let highlightedPNC = null;
+
+    function renderParts() {
+      const tbody = document.getElementById('parts-table-body');
+      const catFilter = document.getElementById('category-filter').value;
+      tbody.innerHTML = '';
+
+      const filtered = genuineParts.filter(p => {
+        const matchModel = p.models.includes(activeModelId);
+        const matchCat = catFilter === 'ALL' || p.category === catFilter;
+        const matchPNC = !highlightedPNC || p.pnc === highlightedPNC;
+        return matchModel && matchCat && matchPNC;
+      });
+
+      if(filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#9ca3af; padding: 20px;">No parts found.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+        if (highlightedPNC && p.pnc === highlightedPNC) tr.className = 'highlight';
+
+        let badgeClass = 'badge-instock';
+        let stockLabel = 'In Stock';
+        if(p.stock === 'lowstock') { badgeClass = 'badge-lowstock'; stockLabel = 'Low Stock (< 5)'; }
+        else if(p.stock === 'outstock') { badgeClass = 'badge-outstock'; stockLabel = 'Backorder'; }
+
+        tr.innerHTML = `
+          <td><span class="part-pnc">${p.pnc}</span><br><small style="font-family:monospace">${p.number}</small></td>
+          <td><strong>${p.name}</strong></td>
+          <td>${p.category}</td>
+          <td class="part-price">AED ${p.priceAED.toFixed(2)}</td>
+          <td><span class="badge ${badgeClass}">${stockLabel}</span></td>
+          <td><button class="btn btn-red" style="padding: 4px 10px; font-size: 0.8rem;" onclick="addToQuote('${p.number}', '${p.name}', ${p.priceAED})">+ Add</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterByPNC(pnc) {
+      highlightedPNC = pnc;
+      renderParts();
+    }
+
+    function decodeVIN() {
+      const vin = document.getElementById('vin-input').value.trim().toUpperCase();
+      const details = document.getElementById('vin-details');
+      if (!vin) return;
+
+      const matched = toyotaModels.find(m => vin.startsWith(m.vinPrefix));
+      if (matched) {
+        activeModelId = matched.id;
+        document.getElementById('vin-model-name').innerText = matched.name;
+        document.getElementById('vin-engine').innerText = '3.5L V6 Twin Turbo / Dynamic Force';
+        details.style.display = 'block';
+        renderModels();
+        renderParts();
+      } else {
+        alert('VIN not found in system database.');
+      }
+    }
+
+    // Cart / Quote Manager
+    const quoteCart = [];
+
+    function addToQuote(partNum, name, priceAED) {
+      const existing = quoteCart.find(i => i.partNum === partNum);
+      if (existing) { existing.qty += 1; }
+      else { quoteCart.push({ partNum, name, priceAED, qty: 1 }); }
+      updateQuoteUI();
+    }
+
+    function updateQuoteUI() {
+      const container = document.getElementById('cart-items');
+      if (quoteCart.length === 0) {
+        container.innerHTML = `<em>No items added to quotation. Click "+ Add" on required parts.</em>`;
+        document.getElementById('quote-subtotal').innerText = 'AED 0.00';
+        document.getElementById('quote-vat').innerText = 'AED 0.00';
+        document.getElementById('quote-total').innerText = 'AED 0.00';
+        return;
+      }
+
+      let subtotal = 0;
+      container.innerHTML = '';
+      
+      quoteCart.forEach(item => {
+        const itemTotal = item.priceAED * item.qty;
+        subtotal += itemTotal;
+
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.style.marginBottom = '6px';
+        row.innerHTML = `
+          <span>${item.qty}x ${item.name} (${item.partNum})</span>
+          <strong>AED ${itemTotal.toFixed(2)}</strong>
+        `;
+        container.appendChild(row);
+      });
+
+      const vat = subtotal * 0.05;
+      const grandTotal = subtotal + vat;
+
+      document.getElementById('quote-subtotal').innerText = `AED ${subtotal.toFixed(2)}`;
+      document.getElementById('quote-vat').innerText = `AED ${vat.toFixed(2)}`;
+      document.getElementById('quote-total').innerText = `AED ${grandTotal.toFixed(2)}`;
+    }
+  </script>
 </body>
 </html>
